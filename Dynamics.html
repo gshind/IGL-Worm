@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Worm Black Box</title>
+	<script src="http://cdnjs.cloudflare.com/ajax/libs/mathjs/2.7.0/math.min.js"></script>
+</head>
+
+<body>
+    <div id="container">
+        <canvas id="wormCanvas" width="700" height="500">
+         
+        </canvas>
+    </div>
+<body>
+    
+	<script type="text/javascript">
+ 
+        var canvas = document.getElementById("wormCanvas");
+        var context = canvas.getContext('2d');
+        var worm;
+       	var G1x = 0;
+        var G2x = 0;
+        var G1y = 0;
+        var G2y = 0;
+        var m1 = 1;
+        var m2 = 1;
+        var t = 0;
+        var dt = 1/10;
+        var v1x = 0;
+        var v2x = 0;
+        var v1y = 0;
+        var v2y = 0;
+        var F = 0;
+        var fs1 = 0;
+        var fs2 = 0;
+        var fk1 = .3;
+        var fk2 = .3;
+        var rb = 0; 
+        
+        var A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
+        					 [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 1, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 1, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0, 1],
+                             [0, 0, 0, 0, 0, 0, 0, 0]]);
+        var x = math.matrix([[10], [0], [110], [0], 
+        					 [0], [0], [0], [0]]);
+        var Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
+        						 [0], [G1y/m1], [0], [G2y/m2]]);
+		var xdot;
+
+       function Segment(xposition, yposition, width, height) {
+        	this.xposition = xposition;
+            this.yposition = yposition;
+            this.width = width;
+            this.height = height;
+        }
+ 
+ 		function updateMatrix() {
+			if(rb  == 1) {
+            	L();
+            }
+            else {
+            	R();
+            }
+            
+            t += dt; 
+            
+            F = 10*math.sin(t);
+            
+            Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
+        						 [0], [G1y/m1], [0], [G2y/m2]]);
+            
+            xdot = math.add(math.multiply(A, x), Force);
+            
+            x = math.add(x, math.dotMultiply(dt, xdot));
+			
+			v1x = x.subset(math.index(1, 0));
+            v2x = x.subset(math.index(3, 0));
+            x1 = x.subset(math.index(0, 0));
+            x2 = x.subset(math.index(2, 0));
+		}
+        
+        function R() {
+            if(v2x > 0 || F > fs2) {
+            	G1x = 0;
+                G2x = F - fk2;
+                if(v1x > 0 || -1*fs1 > F){
+                	G1x = -F-fk1;
+                }
+            }
+            else if(v1x > 0 || -1*fs1 > F) {
+            	G1x = -F - fk1;
+                G2x = 0;
+            }
+            else {
+            	G1x = 0;
+                G2x = 0;
+            }
+        }
+        
+        function L() {
+        	if(v1x < 0 || fs1 < -1*F) {
+            	G1x = F + fk1;
+                G2x = 0;
+                if(v2x < 0 || F > fs2) {
+                	G2x = -F + fk2;
+                }
+            }
+            else if(v2x < 0 || F > fs2) {
+            	G1x = 0;
+                G2x = -F + fk2;
+                if(v1x < 0 || fs1 < -1*F) {
+            		G1x = F + fk1;
+                }
+            }
+            else {
+            	G1x = 0;
+                G2x = 0;
+            }
+        }
+        
+        function outBounds() {
+        	A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
+        					 [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 1, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 1, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0, 1],
+                             [0, 0, 0, 0, 0, 0, 0, 0]]);
+        	x = math.matrix([[10], [0], [160], [0]
+            				 [0], [0], [0], [0]]);
+        	Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
+        						 [0], [G1y/m1], [0], [G2y/m2]]);
+            xdot = math.matrix([[0], [0], [0], [0]
+            					[0], [0], [0], [0]]);
+            v1x = 0;
+      		v2x = 0;
+            x1 = 10;
+            x2 = 160;
+            t = 0;
+        }
+       
+        function reverse() {
+        	v1x = x.subset(math.index(1, 0), -v2x);
+            v2x = x.subset(math.index(3, 0), -v1x);
+		}
+        
+        function tooMuch() {
+        	x = math.subtract(x, math.dotMultiply(dt, xdot));
+        	A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
+        					 [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 1, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0], 
+                             [0, 0, 0, 0, 0, 1, 0, 0], 
+                             [0, 0, 0, 0, 0, 0, 0, 0],
+                             [0, 0, 0, 0, 0, 0, 0, 1],
+                             [0, 0, 0, 0, 0, 0, 0, 0]]);
+        	Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
+        						 [0], [G1y/m1], [0], [G2y/m2]]);
+        	xdot = math.matrix([[0], [0], [0], [0], 
+        						 [0], [0], [0], [0]]);
+            v1x = x.subset(math.index(1, 0), 0);
+            v2x = x.subset(math.index(3, 0), 0);
+        }
+        
+        Segment.prototype.update = function () {  
+			updateMatrix();
+            
+            if(this.xposition + x2 > 700) {
+            	rb = 1; 
+            }
+            else if(this.xposition + x1 < 0) {
+            	rb = 0;
+            }
+            
+            if(math.abs(x2 - x1) > 200 || math.abs(x2 - x1) < 50) {
+            	tooMuch();
+                updateMatrix();
+            }
+            
+			context.fillStyle='red';
+			context.fillRect(x1, 
+                        this.yposition, this.width, this.height); //M1
+
+			context.fillStyle='blue';
+			context.fillRect(x2, 
+            			this.yposition, this.width, this.height); //M2
+                        
+            context.closePath();
+        };
+ 
+        function drawSegments() {
+        	worm = new Segment(10, 50, 20, 20);
+            draw();
+        }
+        
+        drawSegments();
+ 
+        function draw() {
+            context.clearRect(0, 0, 700, 500);
+ 
+ 			worm.update(); 
+            
+            requestAnimationFrame(draw);
+        }
+        
+    </script>
+</body>
+ 
