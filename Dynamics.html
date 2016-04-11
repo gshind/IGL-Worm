@@ -36,6 +36,7 @@
         var fs2 = 0;
         var fk1 = .3;
         var fk2 = .3;
+
         var rb = 0; 
         
         var A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
@@ -52,13 +53,14 @@
         						 [0], [G1y/m1], [0], [G2y/m2]]);
 		var xdot;
 
-       function Segment(xposition, yposition, width, height) {
+
+        // constructor for a segment/block of the worm
+       function Segment(xposition, yposition) {
         	this.xposition = xposition;
             this.yposition = yposition;
-            this.width = width;
-            this.height = height;
         }
  
+        //function that will update the matrix and change the state variables of the worm
  		function updateMatrix() {
 			if(rb  == 1) {
             	L();
@@ -84,24 +86,26 @@
             x2 = x.subset(math.index(2, 0));
 		}
         
+        //function that checks the state of our object and then updates it
         function R() {
-            if(v2x > 0 || F > fs2) {
+            if(v2x > 0 || F > fs2) { //if the second segment is stationary or not
             	G1x = 0;
                 G2x = F - fk2;
                 if(v1x > 0 || -1*fs1 > F){
                 	G1x = -F-fk1;
                 }
             }
-            else if(v1x > 0 || -1*fs1 > F) {
+            else if(v1x > 0 || -1*fs1 > F) { //the second segment is stationary, but the first is not
             	G1x = -F - fk1;
                 G2x = 0;
             }
-            else {
+            else { //both are stationary
             	G1x = 0;
                 G2x = 0;
             }
         }
         
+        //function that checks the state of our object and then updates it
         function L() {
         	if(v1x < 0 || fs1 < -1*F) {
             	G1x = F + fk1;
@@ -123,54 +127,10 @@
             }
         }
         
-        function outBounds() {
-        	A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
-        					 [0, 0, 0, 0, 0, 0, 0, 0], 
-                             [0, 0, 0, 1, 0, 0, 0, 0], 
-                             [0, 0, 0, 0, 0, 0, 0, 0], 
-                             [0, 0, 0, 0, 0, 1, 0, 0], 
-                             [0, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 0, 0, 0, 0]]);
-        	x = math.matrix([[10], [0], [160], [0]
-            				 [0], [0], [0], [0]]);
-        	Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
-        						 [0], [G1y/m1], [0], [G2y/m2]]);
-            xdot = math.matrix([[0], [0], [0], [0]
-            					[0], [0], [0], [0]]);
-            v1x = 0;
-      		v2x = 0;
-            x1 = 10;
-            x2 = 160;
-            t = 0;
-        }
-       
-        function reverse() {
-        	v1x = x.subset(math.index(1, 0), -v2x);
-            v2x = x.subset(math.index(3, 0), -v1x);
-		}
-        
-        function tooMuch() {
-        	x = math.subtract(x, math.dotMultiply(dt, xdot));
-        	A = math.matrix([[0, 1, 0, 0, 0, 0, 0, 0], 
-        					 [0, 0, 0, 0, 0, 0, 0, 0], 
-                             [0, 0, 0, 1, 0, 0, 0, 0], 
-                             [0, 0, 0, 0, 0, 0, 0, 0], 
-                             [0, 0, 0, 0, 0, 1, 0, 0], 
-                             [0, 0, 0, 0, 0, 0, 0, 0],
-                             [0, 0, 0, 0, 0, 0, 0, 1],
-                             [0, 0, 0, 0, 0, 0, 0, 0]]);
-        	Force = math.matrix([[0], [G1x/m1], [0], [G2x/m2], 
-        						 [0], [G1y/m1], [0], [G2y/m2]]);
-        	xdot = math.matrix([[0], [0], [0], [0], 
-        						 [0], [0], [0], [0]]);
-            v1x = x.subset(math.index(1, 0), 0);
-            v2x = x.subset(math.index(3, 0), 0);
-        }
-        
         Segment.prototype.update = function () {  
 			updateMatrix();
             
+            //boundary conditions if the worm moves outside of the canvas
             if(this.xposition + x2 > 700) {
             	rb = 1; 
             }
@@ -178,24 +138,18 @@
             	rb = 0;
             }
             
-            if(math.abs(x2 - x1) > 200 || math.abs(x2 - x1) < 50) {
-            	tooMuch();
-                updateMatrix();
-            }
-            
-			context.fillStyle='red';
-			context.fillRect(x1, 
-                        this.yposition, this.width, this.height); //M1
+            //shape and color of the segments of the worm
+	    	context.fillStyle='red';
+	    	context.fillRect(x1, this.yposition, 20, 20); //M1
 
-			context.fillStyle='blue';
-			context.fillRect(x2, 
-            			this.yposition, this.width, this.height); //M2
+	    	context.fillStyle='blue';
+	    	context.fillRect(x2, this.yposition, 20, 20); //M2
                         
             context.closePath();
         };
  
         function drawSegments() {
-        	worm = new Segment(10, 50, 20, 20);
+            worm = new Segment(10, 50);
             draw();
         }
         
@@ -204,7 +158,7 @@
         function draw() {
             context.clearRect(0, 0, 700, 500);
  
- 			worm.update(); 
+ 	    	worm.update(); 
             
             requestAnimationFrame(draw);
         }
